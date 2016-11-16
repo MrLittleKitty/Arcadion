@@ -4,11 +4,9 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import net.arcation.interfaces.Insertable;
 import net.arcation.interfaces.Selectable;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.nio.channels.SelectableChannel;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -39,7 +37,6 @@ public class Arcadion extends JavaPlugin implements net.arcation.interfaces.Arca
     private static String MAX_CONNECTIONS_PATH = "settings.maxConnections";
     private static String SELECT_THREADS = "settings.selectThreads";
     private static String INSERT_THREADS = "settings.insertThreads";
-
 
     @Override
     public void onEnable()
