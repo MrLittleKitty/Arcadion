@@ -209,4 +209,11 @@ public class Arcadion extends JavaPlugin implements net.arcation.interfaces.Arca
     {
         return dataSource;
     }
+
+    public Connection getConnection() throws SQLException
+    {
+        if(!isActive())
+            return null;
+        return dataSource.getConnection();
+    }
 }
