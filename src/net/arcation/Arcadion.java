@@ -22,6 +22,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class Arcadion extends JavaPlugin implements net.arcation.interfaces.Arcadion
 {
+    public static net.arcation.interfaces.Arcadion instance;
+
     private List<DisableableThread> threads;
     private HikariDataSource dataSource;
 
@@ -42,6 +44,8 @@ public class Arcadion extends JavaPlugin implements net.arcation.interfaces.Arca
     @Override
     public void onEnable()
     {
+        instance = this;
+
         addDefaults();
 
         FileConfiguration pluginConfig = getConfig();
