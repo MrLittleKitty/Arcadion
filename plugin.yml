@@ -1,5 +1,5 @@
 name: Arcadion
-main: com.arcation.arcadion.Arcadion
+main: net.arcation.arcadion.Arcadion
 version: 1.0
 description: A plugin for handling a connection to a MySQL database
 authors: [Mr_Little_Kitty]

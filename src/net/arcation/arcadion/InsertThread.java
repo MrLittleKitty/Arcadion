@@ -1,7 +1,6 @@
 package net.arcation.arcadion;
 
 import net.arcation.arcadion.interfaces.Insertable;
-import net.arcation.interfaces.*;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

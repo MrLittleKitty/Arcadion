@@ -1,6 +1,7 @@
 name: TestLogger
-main: com.arcadion.testlogger.TestLogger
+main: net.arcation.testlogger.TestLogger
 version: 1.0
-description: A plugin for handling a connection to a MySQL database
+description: A test logger plugin
 authors: [Mr_Little_Kitty]
+depend: [Arcadion]
 commands:

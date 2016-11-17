@@ -2,6 +2,7 @@ package net.arcation.arcadion;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.pool.HikariPool;
 import net.arcation.arcadion.interfaces.Insertable;
 import net.arcation.arcadion.interfaces.Selectable;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -47,7 +48,7 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
 
         FileConfiguration pluginConfig = getConfig();
         String hostname = pluginConfig.getString(HOST_PATH);
-        String port = pluginConfig.getString(PORT_PATH);
+        int port = pluginConfig.getInt(PORT_PATH);
         String databaseName = pluginConfig.getString(DATABASE_PATH);
         String user = pluginConfig.getString(USERNAME_PATH);
         String pass = pluginConfig.getString(PASSWORD_PATH);
@@ -63,7 +64,15 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         asyncInsertables = new ConcurrentLinkedQueue<>();
         asyncSelectables = new ConcurrentLinkedQueue<>();
 
-        dataSource = new HikariDataSource(config);
+        try
+        {
+            dataSource = new HikariDataSource(config);
+        }
+        catch(HikariPool.PoolInitializationException e)
+        {
+            dataSource = null;
+            e.printStackTrace();
+        }
 
         if(isActive())
         {
@@ -95,7 +104,7 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
     @Override
     public void onDisable()
     {
-        if(dataSource.isClosed())
+        if(dataSource != null && !dataSource.isClosed())
             dataSource.close();
     }
 
@@ -104,7 +113,7 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         FileConfiguration config = getConfig();
 
         config.addDefault(HOST_PATH,"127.0.0.1");
-        config.addDefault(PORT_PATH,"3380");
+        config.addDefault(PORT_PATH,3380);
         config.addDefault(DATABASE_PATH,"civex");
         config.addDefault(USERNAME_PATH,"root");
         config.addDefault(PASSWORD_PATH,"pass");
@@ -112,11 +121,15 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         config.addDefault(MAX_CONNECTIONS_PATH, 6);
         config.addDefault(SELECT_THREADS, 1);
         config.addDefault(INSERT_THREADS, 1);
+
+        config.options().copyDefaults(true);
+
+        this.saveConfig();
     }
 
     public boolean isActive()
     {
-        return !dataSource.isClosed();
+        return dataSource != null && !dataSource.isClosed();
     }
 
     public void queueAsyncInsertable(Insertable insertable)

@@ -7,5 +7,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="ArcadionAPI" />
+    <orderEntry type="library" name="Maven: org.spigotmc:spigot-api:1.10-R0.1-SNAPSHOT" level="project" />
   </component>
 </module>
