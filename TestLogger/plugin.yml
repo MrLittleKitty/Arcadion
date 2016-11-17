@@ -1,6 +1,6 @@
 name: TestLogger
 main: net.arcation.testlogger.TestLogger
-version: 1.0.0
+version: 1.0.1
 description: A test logger plugin
 authors: [Mr_Little_Kitty]
 depend: [Arcadion]
