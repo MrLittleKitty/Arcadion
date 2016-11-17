@@ -1,6 +1,6 @@
-package net.arcation;
+package net.arcation.arcadion;
 
-import net.arcation.interfaces.Selectable;
+import net.arcation.arcadion.interfaces.Selectable;
 import org.bukkit.Bukkit;
 
 import java.sql.Connection;

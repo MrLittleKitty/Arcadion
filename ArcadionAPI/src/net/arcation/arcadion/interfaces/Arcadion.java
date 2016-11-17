@@ -1,4 +1,4 @@
-package net.arcation.interfaces;
+package net.arcation.arcadion.interfaces;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -12,12 +12,9 @@ public interface Arcadion
 
     void queueAsyncInsertable(Insertable insertable);
 
-
     boolean insert(Insertable insertable);
 
-
     void queueAsyncSelectable(Selectable selectable);
-
 
     boolean select(Selectable selectable);
 

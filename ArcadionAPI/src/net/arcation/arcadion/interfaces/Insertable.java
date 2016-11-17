@@ -1,4 +1,4 @@
-package net.arcation.interfaces;
+package net.arcation.arcadion.interfaces;
 
 import java.sql.PreparedStatement;
 

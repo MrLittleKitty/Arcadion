@@ -1,9 +1,9 @@
-package net.arcation;
+package net.arcation.arcadion;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import net.arcation.interfaces.Insertable;
-import net.arcation.interfaces.Selectable;
+import net.arcation.arcadion.interfaces.Insertable;
+import net.arcation.arcadion.interfaces.Selectable;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -18,9 +18,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * Created by Mr_Little_Kitty on 11/7/2016.
  */
-public class Arcadion extends JavaPlugin implements net.arcation.interfaces.Arcadion
+public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interfaces.Arcadion
 {
-    public static net.arcation.interfaces.Arcadion instance;
+    public static net.arcation.arcadion.interfaces.Arcadion instance;
 
     private List<DisableableThread> threads;
     private HikariDataSource dataSource;

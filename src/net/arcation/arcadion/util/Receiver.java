@@ -1,4 +1,4 @@
-package net.arcation.util;
+package net.arcation.arcadion.util;
 
 public interface Receiver<T>
 {
