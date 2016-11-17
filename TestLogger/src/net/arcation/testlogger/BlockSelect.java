@@ -63,15 +63,15 @@ public class BlockSelect implements Selectable
             StringBuilder builder = new StringBuilder();
             while(set.next())
             {
-                builder.append(set.getString("player_name"))
+                builder.append(set.getString(1))
                         .append(" broke ")
-                        .append(set.getString("block_material"))
+                        .append(set.getString(5))
                         .append(" at ")
-                        .append(set.getInt(x))
+                        .append(set.getInt(2))
                         .append(' ')
-                        .append(set.getInt(y))
+                        .append(set.getInt(3))
                         .append(' ')
-                        .append(set.getInt(z));
+                        .append(set.getInt(4));
                 strings.add(builder.toString());
                 builder.delete(0,builder.length());
             }

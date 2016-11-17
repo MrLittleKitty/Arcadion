@@ -27,12 +27,12 @@ public class TestLogger extends JavaPlugin implements Listener
         arcadion = DatabaseManager.getArcadion();
         if(!arcadion.isActive())
         {
-            this.getLogger().info("[TestLogger] Could NOT start the logger");
+            this.getLogger().info("Could NOT start the logger");
             Bukkit.getPluginManager().disablePlugin(this);
         }
         else
         {
-            this.getLogger().info("[TestLogger] Successfully started the logger");
+            this.getLogger().info("Successfully started the logger");
             createTables();
             Bukkit.getPluginManager().registerEvents(this,this);
         }
@@ -70,7 +70,8 @@ public class TestLogger extends JavaPlugin implements Listener
     @EventHandler
     public void blockBreak(BlockBreakEvent event)
     {
-        arcadion.queueAsyncInsertable(new BlockBreakInsert(event));
-        this.getLogger().info("[TestLogger] Logged block break event");
+        arcadion.insert(new BlockBreakInsert(event));
+        this.getLogger().info("Logged block break event");
+        arcadion.queueAsyncSelectable(new BlockSelect(event.getPlayer().getName(),event.getBlock().getX(),event.getBlock().getY(),event.getBlock().getZ()));
     }
 }
