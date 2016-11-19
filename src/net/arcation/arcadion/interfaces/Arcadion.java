@@ -42,6 +42,13 @@ public interface Arcadion
     boolean select(Selectable selectable);
 
     /**
+     * Provides a method for executing an arbitrary SQL command
+     * @param command The raw SQL command to be executed
+     * @return True if the command executed with error.
+     */
+    boolean executeCommand(String command);
+
+    /**
      * Gets a connection from the connection pool for running SQL commands
      * @return A Connection object for running SQL commands
      * @throws SQLException A SQLException that can occur from the connection pool

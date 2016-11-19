@@ -26,35 +26,42 @@ public class InsertThread extends Thread implements DisableableThread
     {
         while (enabled)
         {
-            Insertable next = arcadion.nextInsertableInQueue();
-            if(next != null)
+            try
             {
-                try (Connection connection = arcadion.getDataSource().getConnection())
+                Insertable next = arcadion.getInsertableQueue().take();
+                if(next != null)
                 {
-                    try (PreparedStatement statement = connection.prepareStatement(next.getStatement()))
+                    try (Connection connection = arcadion.getDataSource().getConnection())
                     {
-                        next.setParameters(statement);
-                        try
+                        try (PreparedStatement statement = connection.prepareStatement(next.getStatement()))
                         {
-                            statement.execute();
+                            next.setParameters(statement);
+                            try
+                            {
+                                statement.execute();
+                            }
+                            catch (SQLException ex)
+                            {
+                                arcadion.getLogger().info("ERROR Executing statement: " + ex.getMessage());
+                                continue;
+                            }
                         }
                         catch (SQLException ex)
                         {
-                            arcadion.getLogger().info("[Arcadion] ERROR Executing statement: " + ex.getMessage());
+                            arcadion.getLogger().info("ERROR Preparing statement: " + ex.getMessage());
                             continue;
-                        }
-                    }
+                        } //Try with resources closes the statement when its over
+                    } //Try with resources closes the connection when its over
                     catch (SQLException ex)
                     {
-                        arcadion.getLogger().info("[Arcadion] ERROR Preparing statement: " + ex.getMessage());
+                        arcadion.getLogger().info("ERROR Acquiring connection: " + ex.getMessage());
                         continue;
-                    } //Try with resources closes the statement when its over
-                } //Try with resources closes the connection when its over
-                catch (SQLException ex)
-                {
-                    arcadion.getLogger().info("[Arcadion] ERROR Acquiring connection: " + ex.getMessage());
-                    continue;
+                    }
                 }
+            }
+            catch (InterruptedException e)
+            {
+                e.printStackTrace();
             }
         }
     }

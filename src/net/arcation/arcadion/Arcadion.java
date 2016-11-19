@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedTransferQueue;
 
 /**
  * Created by Mr_Little_Kitty on 11/7/2016.
@@ -27,8 +28,8 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
     private List<DisableableThread> threads;
     private HikariDataSource dataSource;
 
-    private ConcurrentLinkedQueue<Insertable> asyncInsertables;
-    private ConcurrentLinkedQueue<Selectable> asyncSelectables;
+    private LinkedTransferQueue<Insertable> asyncInsertables;
+    private LinkedTransferQueue<Selectable> asyncSelectables;
 
     private static String HOST_PATH = "database.host";
     private static String PORT_PATH = "database.port";
@@ -62,8 +63,8 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         config.setPassword(pass);
         config.setMaximumPoolSize(maxConnections);
 
-        asyncInsertables = new ConcurrentLinkedQueue<>();
-        asyncSelectables = new ConcurrentLinkedQueue<>();
+        asyncInsertables = new LinkedTransferQueue<>();
+        asyncSelectables = new LinkedTransferQueue<>();
 
         try
         {
@@ -135,7 +136,8 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
 
     public void queueAsyncInsertable(Insertable insertable)
     {
-        asyncInsertables.add(insertable);
+        if(insertable != null)
+            asyncInsertables.offer(insertable);
     }
 
     public boolean insert(Insertable insertable)
@@ -171,7 +173,8 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
 
     public void queueAsyncSelectable(Selectable selectable)
     {
-        asyncSelectables.add(selectable);
+        if(selectable != null)
+            asyncSelectables.offer(selectable);
     }
 
     public boolean select(Selectable selectable)
@@ -192,37 +195,58 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
                 }
                 catch(SQLException ex)
                 {
-                    getLogger().info("[Arcadion] ERROR Executing query statement: "+ex.getMessage());
+                    getLogger().info("ERROR Executing query statement: "+ex.getMessage());
                     return false;
                 }
             }
             catch(SQLException ex)
             {
-                getLogger().info("[Arcadion] ERROR Preparing query statement: "+ex.getMessage());
+                getLogger().info("ERROR Preparing query statement: "+ex.getMessage());
                 return false;
             } //Try with resources closes the statement when its over
         } //Try with resources closes the connection when its over
         catch(SQLException ex)
         {
-            getLogger().info("[Arcadion] ERROR Acquiring query connection: "+ex.getMessage());
+            getLogger().info("ERROR Acquiring query connection: "+ex.getMessage());
             return false;
         }
         return true;
     }
 
-    Insertable nextInsertableInQueue()
+    LinkedTransferQueue<Insertable> getInsertableQueue()
     {
-        return asyncInsertables.poll();
+        return asyncInsertables;
     }
 
-    Selectable nextSelectableInQueue()
+    LinkedTransferQueue<Selectable> getSelectableQueue()
     {
-        return asyncSelectables.poll();
+        return asyncSelectables;
     }
 
     HikariDataSource getDataSource()
     {
         return dataSource;
+    }
+
+    public boolean executeCommand(String command)
+    {
+        try(Connection connection = dataSource.getConnection())
+        {
+            try(PreparedStatement statement = connection.prepareStatement(command))
+            {
+                return statement.execute();
+            }
+            catch(SQLException ex)
+            {
+                getLogger().info("ERROR Preparing command statement: "+ex.getMessage());
+                return false;
+            }
+        }
+        catch(SQLException ex)
+        {
+            getLogger().info("ERROR Acquiring command connection: "+ex.getMessage());
+            return false;
+        }
     }
 
     public Connection getConnection() throws SQLException
