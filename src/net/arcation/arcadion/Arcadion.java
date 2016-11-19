@@ -3,9 +3,10 @@ package net.arcation.arcadion;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
+import net.arcation.arcadion.interfaces.BatchLayout;
+import net.arcation.arcadion.interfaces.InsertBatcher;
 import net.arcation.arcadion.interfaces.Insertable;
 import net.arcation.arcadion.interfaces.Selectable;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -15,7 +16,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedTransferQueue;
 
 /**
@@ -38,8 +38,8 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
     private static String PASSWORD_PATH = "database.password";
 
     private static String MAX_CONNECTIONS_PATH = "settings.maxConnections";
-    private static String SELECT_THREADS = "settings.selectThreads";
-    private static String INSERT_THREADS = "settings.insertThreads";
+    private static String SELECT_THREADS_PATH = "settings.selectThreads";
+    private static String INSERT_THREADS_PATH = "settings.insertThreads";
 
     @Override
     public void onEnable()
@@ -78,29 +78,29 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
 
         if(isActive())
         {
-            this.getLogger().info("[Arcadion] Successfully connected to the database server!");
+            this.getLogger().info("Successfully connected to the database server!");
             threads = new ArrayList<>();
 
-            int insertThreads = pluginConfig.getInt(INSERT_THREADS);
-            int selectThreads = pluginConfig.getInt(SELECT_THREADS);
+            int insertThreads = pluginConfig.getInt(INSERT_THREADS_PATH);
+            int selectThreads = pluginConfig.getInt(SELECT_THREADS_PATH);
 
             for(int i = 0; i < selectThreads; i++)
             {
                 SelectThread t = new SelectThread(this);
                 threads.add(t);
                 t.start();
-                this.getLogger().info("[Arcadion] Created Select Thread #" + (i + 1));
+                this.getLogger().info("Created Select Thread #" + (i + 1));
             }
             for(int i = 0; i < insertThreads; i++)
             {
                 InsertThread t = new InsertThread(this);
                 threads.add(t);
                 t.start();
-                this.getLogger().info("[Arcadion] Created Insert Thread #" + (i + 1));
+                this.getLogger().info("Created Insert Thread #" + (i + 1));
             }
         }
         else
-            this.getLogger().info("[Arcadion] ERROR Could not connect to the database server!");
+            this.getLogger().info("ERROR Could not connect to the database server!");
     }
 
     @Override
@@ -115,14 +115,14 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         FileConfiguration config = getConfig();
 
         config.addDefault(HOST_PATH,"127.0.0.1");
-        config.addDefault(PORT_PATH,3380);
+        config.addDefault(PORT_PATH, 3380);
         config.addDefault(DATABASE_PATH,"civex");
         config.addDefault(USERNAME_PATH,"root");
         config.addDefault(PASSWORD_PATH,"pass");
 
         config.addDefault(MAX_CONNECTIONS_PATH, 6);
-        config.addDefault(SELECT_THREADS, 1);
-        config.addDefault(INSERT_THREADS, 1);
+        config.addDefault(SELECT_THREADS_PATH, 1);
+        config.addDefault(INSERT_THREADS_PATH, 1);
 
         config.options().copyDefaults(true);
 
@@ -153,19 +153,19 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
                 }
                 catch(SQLException ex)
                 {
-                    getLogger().info("[Arcadion] ERROR Executing statement: "+ex.getMessage());
+                    getLogger().info("ERROR Executing statement: "+ex.getMessage());
                     return false;
                 }
             }
             catch(SQLException ex)
             {
-                getLogger().info("[Arcadion] ERROR Preparing statement: "+ex.getMessage());
+                getLogger().info("ERROR Preparing statement: "+ex.getMessage());
                 return false;
             } //Try with resources closes the statement when its over
         } //Try with resources closes the connection when its over
         catch(SQLException ex)
         {
-            getLogger().info("[Arcadion] ERROR Acquiring connection: "+ex.getMessage());
+            getLogger().info("ERROR Acquiring connection: "+ex.getMessage());
             return false;
         }
         return true;
@@ -254,5 +254,10 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         if(!isActive())
             return null;
         return dataSource.getConnection();
+    }
+
+    public <T> InsertBatcher<T> prepareInsertBatcher(BatchLayout<T> layout, int startingBatchSize)
+    {
+
     }
 }

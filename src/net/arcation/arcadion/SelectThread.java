@@ -11,7 +11,7 @@ import java.sql.SQLException;
 /*
 Created by Mr_Little_Kitty on 5/7/2015
 */
-public class SelectThread extends Thread implements DisableableThread
+class SelectThread extends Thread implements DisableableThread
 {
     private Arcadion arcadion;
     private boolean enabled;
@@ -28,50 +28,53 @@ public class SelectThread extends Thread implements DisableableThread
     {
         while(enabled)
         {
+            Selectable next = null;
             try
             {
-                Selectable next = arcadion.getSelectableQueue().take();
-                if(next != null)
+                next = arcadion.getSelectableQueue().take();
+            }
+            catch (InterruptedException ex)
+            {
+                arcadion.getLogger().info("ERROR Thread interrupted getting Selectable: " + ex.getMessage());
+                continue;
+            }
+
+            if(next != null)
+            {
+                try (Connection connection = arcadion.getDataSource().getConnection())
                 {
-                    try (Connection connection = arcadion.getDataSource().getConnection())
+                    try (PreparedStatement statement = connection.prepareStatement(next.getQuery()))
                     {
-                        try (PreparedStatement statement = connection.prepareStatement(next.getQuery()))
+                        next.setParameters(statement);
+                        try
                         {
-                            next.setParameters(statement);
-                            try
-                            {
-                                ResultSet set = statement.executeQuery();
+                            ResultSet set = statement.executeQuery();
 
-                                next.receiveResult(set);
-                                set.close();
+                            next.receiveResult(set);
+                            set.close();
 
-                                if(next.shouldCallbackAsync())
-                                    next.callBack();
-                                else
-                                    Bukkit.getScheduler().scheduleSyncDelayedTask(arcadion,new SyncRun(next));
-                            }
-                            catch (SQLException ex)
-                            {
-                                arcadion.getLogger().info("[Arcadion] ERROR Executing query statement: " + ex.getMessage());
-                                continue;
-                            }
+                            if(next.shouldCallbackAsync())
+                                next.callBack();
+                            else
+                                Bukkit.getScheduler().scheduleSyncDelayedTask(arcadion,new SyncRun(next));
                         }
                         catch (SQLException ex)
                         {
-                            arcadion.getLogger().info("[Arcadion] ERROR Preparing query statement: " + ex.getMessage());
+                            arcadion.getLogger().info("ERROR Executing query statement: " + ex.getMessage());
                             continue;
-                        } //Try with resources closes the statement when its over
-                    } //Try with resources closes the connection when its over
+                        }
+                    }
                     catch (SQLException ex)
                     {
-                        arcadion.getLogger().info("[Arcadion] ERROR Acquiring query connection: " + ex.getMessage());
+                        arcadion.getLogger().info("ERROR Preparing query statement: " + ex.getMessage());
                         continue;
-                    }
+                    } //Try with resources closes the statement when its over
+                } //Try with resources closes the connection when its over
+                catch (SQLException ex)
+                {
+                    arcadion.getLogger().info("ERROR Acquiring query connection: " + ex.getMessage());
+                    continue;
                 }
-            }
-            catch (InterruptedException e)
-            {
-                e.printStackTrace();
             }
         }
     }

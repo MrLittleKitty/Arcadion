@@ -54,4 +54,6 @@ public interface Arcadion
      * @throws SQLException A SQLException that can occur from the connection pool
      */
     Connection getConnection() throws SQLException;
+
+    <T> InsertBatcher<T> prepareInsertBatcher(BatchLayout<T> layout, int startingBatchSize);
 }

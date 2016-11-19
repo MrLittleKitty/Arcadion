@@ -9,7 +9,7 @@ import java.sql.SQLException;
 /*
 Created by Mr_Little_Kitty on 5/7/2015
 */
-public class InsertThread extends Thread implements DisableableThread
+class InsertThread extends Thread implements DisableableThread
 {
     private Arcadion arcadion;
     private boolean enabled;
@@ -26,42 +26,45 @@ public class InsertThread extends Thread implements DisableableThread
     {
         while (enabled)
         {
+            Insertable next = null;
             try
             {
-                Insertable next = arcadion.getInsertableQueue().take();
-                if(next != null)
+                next = arcadion.getInsertableQueue().take();
+            }
+            catch (InterruptedException ex)
+            {
+                arcadion.getLogger().info("ERROR Thread interrupted while getting Insertable: " + ex.getMessage());
+                continue;
+            }
+
+            if(next != null)
+            {
+                try (Connection connection = arcadion.getDataSource().getConnection())
                 {
-                    try (Connection connection = arcadion.getDataSource().getConnection())
+                    try (PreparedStatement statement = connection.prepareStatement(next.getStatement()))
                     {
-                        try (PreparedStatement statement = connection.prepareStatement(next.getStatement()))
+                        next.setParameters(statement);
+                        try
                         {
-                            next.setParameters(statement);
-                            try
-                            {
-                                statement.execute();
-                            }
-                            catch (SQLException ex)
-                            {
-                                arcadion.getLogger().info("ERROR Executing statement: " + ex.getMessage());
-                                continue;
-                            }
+                            statement.execute();
                         }
                         catch (SQLException ex)
                         {
-                            arcadion.getLogger().info("ERROR Preparing statement: " + ex.getMessage());
+                            arcadion.getLogger().info("ERROR Executing statement: " + ex.getMessage());
                             continue;
-                        } //Try with resources closes the statement when its over
-                    } //Try with resources closes the connection when its over
+                        }
+                    }
                     catch (SQLException ex)
                     {
-                        arcadion.getLogger().info("ERROR Acquiring connection: " + ex.getMessage());
+                        arcadion.getLogger().info("ERROR Preparing statement: " + ex.getMessage());
                         continue;
-                    }
+                    } //Try with resources closes the statement when its over
+                } //Try with resources closes the connection when its over
+                catch (SQLException ex)
+                {
+                    arcadion.getLogger().info("ERROR Acquiring connection: " + ex.getMessage());
+                    continue;
                 }
-            }
-            catch (InterruptedException e)
-            {
-                e.printStackTrace();
             }
         }
     }
