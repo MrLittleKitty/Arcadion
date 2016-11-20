@@ -25,9 +25,7 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
 {
     public static net.arcation.arcadion.interfaces.Arcadion instance;
 
-    private int shutdownState = 0;
-
-    private List<Thread> threads;
+    private ThreadGroup threads;
     private HikariDataSource dataSource;
 
     private LinkedTransferQueue<Insertable> asyncInsertables;
@@ -81,7 +79,7 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         if(isActive())
         {
             this.getLogger().info("Successfully connected to the database server!");
-            threads = new ArrayList<>();
+            threads = new ThreadGroup("Arcadion Thread Group");
 
             int insertThreads = pluginConfig.getInt(INSERT_THREADS_PATH);
             int selectThreads = pluginConfig.getInt(SELECT_THREADS_PATH);
@@ -93,15 +91,13 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
 
             for(int i = 0; i < selectThreads; i++)
             {
-                SelectThread t = new SelectThread(this);
-                threads.add(t);
+                SelectThread t = new SelectThread(this,threads);
                 t.start();
                 this.getLogger().info("Created Select Thread #" + (i + 1));
             }
             for(int i = 0; i < insertThreads; i++)
             {
-                InsertThread t = new InsertThread(this);
-                threads.add(t);
+                InsertThread t = new InsertThread(this,threads);
                 t.start();
                 this.getLogger().info("Created Insert Thread #" + (i + 1));
             }
@@ -113,10 +109,24 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
     @Override
     public void onDisable()
     {
-        shutdownState++;
+        Thread[] finalThreads = new Thread[threads.activeCount()];
+        threads.enumerate(finalThreads);
 
-        for(Thread t : threads)
-            t.interrupt();
+        //For loop because its simpler and depends less on Iterators, etc...
+        for(int i = 0; i < finalThreads.length; i++)
+        {
+            finalThreads[i].interrupt();
+            try
+            {
+                finalThreads[i].join(6000);
+            }
+            catch (InterruptedException e)
+            {
+                this.getLogger().info("ERROR A database thread had an error while shutting down: "+e.getMessage());
+            }
+            if(finalThreads[i].isAlive())
+                this.getLogger().info("ERROR A database thread did not shut down in time: ThreadName: "+finalThreads[i].getName());
+        }
     }
 
     private void addDefaults()
@@ -140,94 +150,86 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
 
     public boolean isActive()
     {
-        return dataSource != null && !dataSource.isClosed() && shutdownState == 0;
+        return dataSource != null && !dataSource.isClosed();
     }
 
     public void queueAsyncInsertable(Insertable insertable)
     {
-        if(insertable != null && shutdownState == 0)
+        if(insertable != null)
             asyncInsertables.offer(insertable);
     }
 
     public boolean insert(Insertable insertable)
     {
-        if(shutdownState == 0)
+        try (Connection connection = dataSource.getConnection())
         {
-            try (Connection connection = dataSource.getConnection())
+            try (PreparedStatement statement = connection.prepareStatement(insertable.getStatement()))
             {
-                try (PreparedStatement statement = connection.prepareStatement(insertable.getStatement()))
+                insertable.setParameters(statement);
+                try
                 {
-                    insertable.setParameters(statement);
-                    try
-                    {
-                        statement.execute();
-                    }
-                    catch (SQLException ex)
-                    {
-                        getLogger().info("ERROR Executing statement: " + ex.getMessage());
-                        return false;
-                    }
+                    statement.execute();
                 }
                 catch (SQLException ex)
                 {
-                    getLogger().info("ERROR Preparing statement: " + ex.getMessage());
+                    getLogger().info("ERROR Executing statement: " + ex.getMessage());
                     return false;
-                } //Try with resources closes the statement when its over
-            } //Try with resources closes the connection when its over
+                }
+            }
             catch (SQLException ex)
             {
-                getLogger().info("ERROR Acquiring connection: " + ex.getMessage());
+                getLogger().info("ERROR Preparing statement: " + ex.getMessage());
                 return false;
-            }
-            return true;
+            } //Try with resources closes the statement when its over
+        } //Try with resources closes the connection when its over
+        catch (SQLException ex)
+        {
+            getLogger().info("ERROR Acquiring connection: " + ex.getMessage());
+            return false;
         }
-        return false;
+        return true;
     }
 
     public void queueAsyncSelectable(Selectable selectable)
     {
-        if(selectable != null && shutdownState == 0)
+        if(selectable != null)
             asyncSelectables.offer(selectable);
     }
 
     public boolean select(Selectable selectable)
     {
-        if(shutdownState == 0)
+        try (Connection connection = dataSource.getConnection())
         {
-            try (Connection connection = dataSource.getConnection())
+            try (PreparedStatement statement = connection.prepareStatement(selectable.getQuery()))
             {
-                try (PreparedStatement statement = connection.prepareStatement(selectable.getQuery()))
+                selectable.setParameters(statement);
+                try
                 {
-                    selectable.setParameters(statement);
-                    try
-                    {
-                        ResultSet set = statement.executeQuery();
+                    ResultSet set = statement.executeQuery();
 
-                        selectable.receiveResult(set);
-                        set.close();
+                    selectable.receiveResult(set);
+                    set.close();
 
-                        selectable.callBack();
-                    }
-                    catch (SQLException ex)
-                    {
-                        getLogger().info("ERROR Executing query statement: " + ex.getMessage());
-                        return false;
-                    }
+                    selectable.callBack();
                 }
                 catch (SQLException ex)
                 {
-                    getLogger().info("ERROR Preparing query statement: " + ex.getMessage());
+                    getLogger().info("ERROR Executing query statement: " + ex.getMessage());
                     return false;
-                } //Try with resources closes the statement when its over
-            } //Try with resources closes the connection when its over
+                }
+            }
             catch (SQLException ex)
             {
-                getLogger().info("ERROR Acquiring query connection: " + ex.getMessage());
+                getLogger().info("ERROR Preparing query statement: " + ex.getMessage());
                 return false;
-            }
-            return true;
+            } //Try with resources closes the statement when its over
+        } //Try with resources closes the connection when its over
+        catch (SQLException ex)
+        {
+            getLogger().info("ERROR Acquiring query connection: " + ex.getMessage());
+            return false;
         }
-        return false;
+        return true;
     }
 
     LinkedTransferQueue<Insertable> getInsertableQueue()
@@ -245,55 +247,46 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         return dataSource;
     }
 
-    synchronized void shutDownCallback()
-    {
-        //Increment the shutdown state if it was started from onDisable()
-        //If this method is called and shutdownState == 0, then a thread failed and it isn't shutting down
-        if(shutdownState > 0)
-            shutdownState++;
-
-        //Once onDisable() is called, shutdownState immediately goes to 1
-        //Then, every thread increments it when that thread is done.
-        //So, if it equals the number of threads + 1, all the threads have shut down
-        if(shutdownState == threads.size()+1)
-            if(dataSource != null && !dataSource.isClosed())
-                dataSource.close();
-    }
-
     public boolean executeCommand(String command)
     {
-        if(shutdownState == 0)
+        try (Connection connection = dataSource.getConnection())
         {
-            try (Connection connection = dataSource.getConnection())
+            try (PreparedStatement statement = connection.prepareStatement(command))
             {
-                try (PreparedStatement statement = connection.prepareStatement(command))
-                {
-                    return statement.execute();
-                }
-                catch (SQLException ex)
-                {
-                    getLogger().info("ERROR Preparing command statement: " + ex.getMessage());
-                    return false;
-                }
+                return statement.execute();
             }
             catch (SQLException ex)
             {
-                getLogger().info("ERROR Acquiring command connection: " + ex.getMessage());
+                getLogger().info("ERROR Preparing command statement: " + ex.getMessage());
                 return false;
             }
         }
-        return false;
+        catch (SQLException ex)
+        {
+            getLogger().info("ERROR Acquiring command connection: " + ex.getMessage());
+            return false;
+        }
     }
 
     public Connection getConnection() throws SQLException
     {
-        if(!isActive() || shutdownState != 0)
+        if(!isActive())
             return null;
         return dataSource.getConnection();
     }
 
-    public <T> InsertBatcher<T> prepareInsertBatcher(BatchLayout<T> layout, int startingBatchSize)
+    public <T> InsertBatcher<T> prepareInsertBatcher(BatchLayout<T> layout)
     {
-        return null;
+        InsertBatcher<T> toReturn;
+        try
+        {
+            toReturn = new Batcher<>(this,layout);
+        }
+        catch (SQLException e)
+        {
+            getLogger().info("ERROR in instantiating batcher: " + e.getMessage());
+            toReturn = null;
+        }
+        return toReturn;
     }
 }

@@ -54,4 +54,12 @@ public interface Arcadion
      * @throws SQLException A SQLException that can occur from the connection pool
      */
     Connection getConnection() throws SQLException;
+
+    /**
+     * Returns an object that can be used to asynchronously execute a batch insert
+     * @param layout The Layout object used to layout the batch insert statement
+     * @param <T> The type of the object that will be batched
+     * @return Returns the InsertBatcher object of the given type
+     */
+    <T> InsertBatcher<T> prepareInsertBatcher(BatchLayout<T> layout);
 }

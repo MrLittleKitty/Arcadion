@@ -14,8 +14,9 @@ class InsertThread extends Thread
 {
     private Arcadion arcadion;
 
-    public InsertThread(Arcadion arcadion)
+    public InsertThread(Arcadion arcadion, ThreadGroup group)
     {
+        super(group,"Arcadion Insert Thread");
         this.arcadion = arcadion;
     }
 
@@ -43,9 +44,6 @@ class InsertThread extends Thread
 
         for(Insertable i : finalToExecute)
             executeInsertable(i);
-
-        //Call back to the main thread so it can continue its shutdown process
-        arcadion.shutDownCallback();
     }
 
     private void executeInsertable(Insertable insertable)

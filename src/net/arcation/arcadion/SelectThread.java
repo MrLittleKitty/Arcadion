@@ -16,8 +16,9 @@ class SelectThread extends Thread
 {
     private Arcadion arcadion;
 
-    public SelectThread(Arcadion arcadion)
+    public SelectThread(Arcadion arcadion,ThreadGroup group)
     {
+        super(group,"Arcadion Select Thread");
         this.arcadion = arcadion;
     }
 
@@ -44,9 +45,6 @@ class SelectThread extends Thread
         arcadion.getSelectableQueue().drainTo(finalToExecute);
         for(Selectable s : finalToExecute)
             executeSelectable(s);
-
-        //Call back to the main thread so it can continue its shut down
-        arcadion.shutDownCallback();
     }
 
     private void executeSelectable(Selectable selectable)

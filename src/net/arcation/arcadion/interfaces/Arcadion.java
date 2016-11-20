@@ -55,5 +55,11 @@ public interface Arcadion
      */
     Connection getConnection() throws SQLException;
 
-    <T> InsertBatcher<T> prepareInsertBatcher(BatchLayout<T> layout, int startingBatchSize);
+    /**
+     * Returns an object that can be used to asynchronously execute a batch insert
+     * @param layout The Layout object used to layout the batch insert statement
+     * @param <T> The type of the object that will be batched
+     * @return Returns the InsertBatcher object of the given type
+     */
+    <T> InsertBatcher<T> prepareInsertBatcher(BatchLayout<T> layout);
 }
