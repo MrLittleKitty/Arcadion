@@ -7,26 +7,24 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 /*
 Created by Mr_Little_Kitty on 5/7/2015
 */
-class SelectThread extends Thread implements DisableableThread
+class SelectThread extends Thread
 {
     private Arcadion arcadion;
-    private boolean enabled;
 
     public SelectThread(Arcadion arcadion)
     {
         this.arcadion = arcadion;
-        enabled = true;
-
     }
 
     @Override
     public void run()
     {
-        while(enabled)
+        while(this.isInterrupted())
         {
             Selectable next = null;
             try
@@ -35,54 +33,61 @@ class SelectThread extends Thread implements DisableableThread
             }
             catch (InterruptedException ex)
             {
-                arcadion.getLogger().info("ERROR Thread interrupted getting Selectable: " + ex.getMessage());
-                continue;
+                arcadion.getLogger().info("ERROR Select Thread interrupted: " + ex.getMessage());
+                break;
             }
 
-            if(next != null)
+            executeSelectable(next);
+        }
+
+        ArrayList<Selectable> finalToExecute = new ArrayList<>();
+        arcadion.getSelectableQueue().drainTo(finalToExecute);
+        for(Selectable s : finalToExecute)
+            executeSelectable(s);
+
+        //Call back to the main thread so it can continue its shut down
+        arcadion.shutDownCallback();
+    }
+
+    private void executeSelectable(Selectable selectable)
+    {
+        if(selectable != null)
+        {
+            try (Connection connection = arcadion.getDataSource().getConnection())
             {
-                try (Connection connection = arcadion.getDataSource().getConnection())
+                try (PreparedStatement statement = connection.prepareStatement(selectable.getQuery()))
                 {
-                    try (PreparedStatement statement = connection.prepareStatement(next.getQuery()))
+                    selectable.setParameters(statement);
+                    try
                     {
-                        next.setParameters(statement);
-                        try
-                        {
-                            ResultSet set = statement.executeQuery();
+                        ResultSet set = statement.executeQuery();
 
-                            next.receiveResult(set);
-                            set.close();
+                        selectable.receiveResult(set);
+                        set.close();
 
-                            if(next.shouldCallbackAsync())
-                                next.callBack();
-                            else
-                                Bukkit.getScheduler().scheduleSyncDelayedTask(arcadion,new SyncRun(next));
-                        }
-                        catch (SQLException ex)
-                        {
-                            arcadion.getLogger().info("ERROR Executing query statement: " + ex.getMessage());
-                            continue;
-                        }
+                        if(selectable.shouldCallbackAsync())
+                            selectable.callBack();
+                        else
+                            Bukkit.getScheduler().scheduleSyncDelayedTask(arcadion,new SyncRun(selectable));
                     }
                     catch (SQLException ex)
                     {
-                        arcadion.getLogger().info("ERROR Preparing query statement: " + ex.getMessage());
-                        continue;
-                    } //Try with resources closes the statement when its over
-                } //Try with resources closes the connection when its over
+                        arcadion.getLogger().info("ERROR Executing query statement: " + ex.getMessage());
+                        return;
+                    }
+                }
                 catch (SQLException ex)
                 {
-                    arcadion.getLogger().info("ERROR Acquiring query connection: " + ex.getMessage());
-                    continue;
-                }
+                    arcadion.getLogger().info("ERROR Preparing query statement: " + ex.getMessage());
+                    return;
+                } //Try with resources closes the statement when its over
+            } //Try with resources closes the connection when its over
+            catch (SQLException ex)
+            {
+                arcadion.getLogger().info("ERROR Acquiring query connection: " + ex.getMessage());
+                return;
             }
         }
-    }
-
-    @Override
-    public void disable()
-    {
-        this.enabled = false;
     }
 
     private class SyncRun implements Runnable

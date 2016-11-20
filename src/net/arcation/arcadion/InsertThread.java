@@ -5,26 +5,24 @@ import net.arcation.arcadion.interfaces.Insertable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 /*
 Created by Mr_Little_Kitty on 5/7/2015
 */
-class InsertThread extends Thread implements DisableableThread
+class InsertThread extends Thread
 {
     private Arcadion arcadion;
-    private boolean enabled;
 
     public InsertThread(Arcadion arcadion)
     {
         this.arcadion = arcadion;
-        enabled = true;
-
     }
 
     @Override
     public void run()
     {
-        while (enabled)
+        while (!this.isInterrupted())
         {
             Insertable next = null;
             try
@@ -33,44 +31,53 @@ class InsertThread extends Thread implements DisableableThread
             }
             catch (InterruptedException ex)
             {
-                arcadion.getLogger().info("ERROR Thread interrupted while getting Insertable: " + ex.getMessage());
-                continue;
+                arcadion.getLogger().info("INFO Insert Thread interrupted: " + ex.getMessage());
+                break;
             }
 
-            if(next != null)
+            executeInsertable(next);
+        }
+
+        ArrayList<Insertable> finalToExecute = new ArrayList<>();
+        arcadion.getInsertableQueue().drainTo(finalToExecute);
+
+        for(Insertable i : finalToExecute)
+            executeInsertable(i);
+
+        //Call back to the main thread so it can continue its shutdown process
+        arcadion.shutDownCallback();
+    }
+
+    private void executeInsertable(Insertable insertable)
+    {
+        if(insertable != null)
+        {
+            try (Connection connection = arcadion.getDataSource().getConnection())
             {
-                try (Connection connection = arcadion.getDataSource().getConnection())
+                try (PreparedStatement statement = connection.prepareStatement(insertable.getStatement()))
                 {
-                    try (PreparedStatement statement = connection.prepareStatement(next.getStatement()))
+                    insertable.setParameters(statement);
+                    try
                     {
-                        next.setParameters(statement);
-                        try
-                        {
-                            statement.execute();
-                        }
-                        catch (SQLException ex)
-                        {
-                            arcadion.getLogger().info("ERROR Executing statement: " + ex.getMessage());
-                            continue;
-                        }
+                        statement.execute();
                     }
                     catch (SQLException ex)
                     {
-                        arcadion.getLogger().info("ERROR Preparing statement: " + ex.getMessage());
-                        continue;
-                    } //Try with resources closes the statement when its over
-                } //Try with resources closes the connection when its over
+                        arcadion.getLogger().info("ERROR Executing statement: " + ex.getMessage());
+                        return;
+                    }
+                }
                 catch (SQLException ex)
                 {
-                    arcadion.getLogger().info("ERROR Acquiring connection: " + ex.getMessage());
-                    continue;
-                }
+                    arcadion.getLogger().info("ERROR Preparing statement: " + ex.getMessage());
+                    return;
+                } //Try with resources closes the statement when its over
+            } //Try with resources closes the connection when its over
+            catch (SQLException ex)
+            {
+                arcadion.getLogger().info("ERROR Acquiring connection: " + ex.getMessage());
+                return;
             }
         }
-    }
-
-    public void disable()
-    {
-        enabled = false;
     }
 }
