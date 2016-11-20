@@ -58,15 +58,15 @@ class SelectThread extends Thread
                     selectable.setParameters(statement);
                     try
                     {
-                        ResultSet set = statement.executeQuery();
+                        try(ResultSet set = statement.executeQuery())
+                        {
+                            selectable.receiveResult(set);
+                        }
 
-                        selectable.receiveResult(set);
-                        set.close();
-
-                        if(selectable.shouldCallbackAsync())
+                        if (selectable.shouldCallbackAsync())
                             selectable.callBack();
                         else
-                            Bukkit.getScheduler().scheduleSyncDelayedTask(arcadion,new SyncRun(selectable));
+                            Bukkit.getScheduler().scheduleSyncDelayedTask(arcadion, new SyncRun(selectable));
                     }
                     catch (SQLException ex)
                     {
