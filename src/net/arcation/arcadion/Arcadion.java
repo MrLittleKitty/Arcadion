@@ -41,6 +41,10 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
     private static String SELECT_THREADS_PATH = "settings.selectThreads";
     private static String INSERT_THREADS_PATH = "settings.insertThreads";
 
+    private static String CONNECTION_TIMEOUT_PATH = "settings.connectionTimeout";
+    private static String IDLE_TIMEOUT_PATH = "settings.connectionIdleTimeout";
+    private static String MAX_LIFETIME = "settings.connectionMaxLifetime";
+
     @Override
     public void onEnable()
     {
@@ -57,11 +61,18 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
 
         int maxConnections = pluginConfig.getInt(MAX_CONNECTIONS_PATH);
 
+        long connectTimeout = pluginConfig.getLong(CONNECTION_TIMEOUT_PATH);
+        long idleTimeout = pluginConfig.getLong(IDLE_TIMEOUT_PATH);
+        long maxLifetime = pluginConfig.getLong(MAX_LIFETIME);
+
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl("jdbc:mysql://" + hostname + ":" + port + "/" + databaseName);
         config.setUsername(user);
         config.setPassword(pass);
         config.setMaximumPoolSize(maxConnections);
+        config.setConnectionTimeout(connectTimeout);
+        config.setIdleTimeout(idleTimeout);
+        config.setMaxLifetime(maxLifetime);
 
         asyncInsertables = new LinkedTransferQueue<>();
         asyncSelectables = new LinkedTransferQueue<>();
@@ -142,6 +153,10 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         config.addDefault(MAX_CONNECTIONS_PATH, 6);
         config.addDefault(SELECT_THREADS_PATH, 1);
         config.addDefault(INSERT_THREADS_PATH, 1);
+
+        config.addDefault(CONNECTION_TIMEOUT_PATH, (long)(8 * 1000)); //8 seconds (8 times 1000 milliseconds)
+        config.addDefault(IDLE_TIMEOUT_PATH, (long)(10 * 60 * 1000)); //10 minutes (10 times 60 seconds times 1000 milliseconds)
+        config.addDefault(MAX_LIFETIME,(long)(2 * 60 * 60 * 1000)); //2 hours (2 times 60 minutes * 60 seconds * 1000 milliseconds)
 
         config.options().copyDefaults(true);
 

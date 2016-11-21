@@ -11,16 +11,11 @@ import java.sql.SQLException;
  */
 public class BlockBreakInsert implements Insertable
 {
-    private final String playerName,blockMaterial;
-    private final int x,y,z;
+    private BlockAction item;
 
-    public BlockBreakInsert(BlockBreakEvent event)
+    public BlockBreakInsert(BlockAction action)
     {
-        playerName = event.getPlayer().getName();
-        blockMaterial = event.getBlock().getType().name();
-        x = event.getBlock().getX();
-        y = event.getBlock().getY();
-        z = event.getBlock().getZ();
+       this.item = action;
     }
 
     @Override
@@ -28,11 +23,12 @@ public class BlockBreakInsert implements Insertable
     {
         try
         {
-            statement.setString(1,playerName);
-            statement.setInt(2,x);
-            statement.setInt(3,y);
-            statement.setInt(4,z);
-            statement.setString(5,blockMaterial);
+            statement.setString(1, item.PlayerName);
+            statement.setInt(2, item.X);
+            statement.setInt(3, item.Y);
+            statement.setInt(4, item.Z);
+            statement.setString(5, item.BlockMaterial);
+            statement.setString(6, item.Action);
         }
         catch (SQLException e)
         {
@@ -43,6 +39,6 @@ public class BlockBreakInsert implements Insertable
     @Override
     public String getStatement()
     {
-        return "INSERT INTO "+TestLogger.BLOCK_BREAK_TABLE+" (player_name,x,y,z,block_material) VALUES (?,?,?,?,?);";
+        return "INSERT INTO "+TestLogger.BLOCK_BREAK_TABLE+" (player_name,x,y,z,block_material,action) VALUES (?,?,?,?,?,?);";
     }
 }
