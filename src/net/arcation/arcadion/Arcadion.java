@@ -14,8 +14,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.LinkedTransferQueue;
 
 /**
@@ -69,10 +67,21 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         config.setJdbcUrl("jdbc:mysql://" + hostname + ":" + port + "/" + databaseName);
         config.setUsername(user);
         config.setPassword(pass);
+
+        //The maximum amount of connections in the connection pool
         config.setMaximumPoolSize(maxConnections);
+
+        //The maximum amount of time a connection will wait for a SQL command to be executed before...it fails? I guess?
         config.setConnectionTimeout(connectTimeout);
+
+        //The maximum amount of time a connection is allowed to set idle before it is retired
         config.setIdleTimeout(idleTimeout);
+
+        //The maximum amount of time a connection is allowed to stay in the pool
         config.setMaxLifetime(maxLifetime);
+
+        //The name of the pool used in logging and stuff
+        config.setPoolName("Arcadion Connection Pool");
 
         asyncInsertables = new LinkedTransferQueue<>();
         asyncSelectables = new LinkedTransferQueue<>();
@@ -120,21 +129,26 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
     @Override
     public void onDisable()
     {
+        //Interrupt all the threads first
+        threads.interrupt();
+
+        //Get all the threads to enumerate over them
         Thread[] finalThreads = new Thread[threads.activeCount()];
         threads.enumerate(finalThreads);
 
         //For loop because its simpler and depends less on Iterators, etc...
         for(int i = 0; i < finalThreads.length; i++)
         {
-            finalThreads[i].interrupt();
             try
             {
+                //Join on all the interrupted threads to make sure they all finish (6 second timeout)
                 finalThreads[i].join(6000);
             }
             catch (InterruptedException e)
             {
                 this.getLogger().info("ERROR A database thread had an error while shutting down: "+e.getMessage());
             }
+
             if(finalThreads[i].isAlive())
                 this.getLogger().info("ERROR A database thread did not shut down in time: ThreadName: "+finalThreads[i].getName());
         }
@@ -220,10 +234,10 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
                 selectable.setParameters(statement);
                 try
                 {
-                    ResultSet set = statement.executeQuery();
-
-                    selectable.receiveResult(set);
-                    set.close();
+                    try( ResultSet set = statement.executeQuery())
+                    {
+                       selectable.receiveResult(set);
+                    } //Try with resources closes the result set when its done
 
                     selectable.callBack();
                 }

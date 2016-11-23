@@ -51,7 +51,7 @@ class Batcher<T> extends InsertBatcher<T>
             PreparedStatement temp = statement;
 
             //Set the current statement to be a new one (other statement will be run/closed)
-            statement = statement.getConnection().prepareStatement(layout.getStatement());
+            statement = arcadion.getConnection().prepareStatement(layout.getStatement());
 
             //Pass the old statement into an async thread so it can be run/closed
             Bukkit.getScheduler().runTaskAsynchronously(arcadion, new RunBatch(temp));
