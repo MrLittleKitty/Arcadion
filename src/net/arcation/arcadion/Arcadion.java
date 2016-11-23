@@ -159,6 +159,9 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         }
 
         this.getLogger().info("Successfully ended "+finalThreads.length+" threads.");
+
+        //Close the actual threadpool with all its database connections
+        dataSource.close();
     }
 
     private void addDefaults()

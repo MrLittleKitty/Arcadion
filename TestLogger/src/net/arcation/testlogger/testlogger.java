@@ -104,7 +104,7 @@ public class TestLogger extends JavaPlugin implements Listener
 
     private void checkBatch()
     {
-        if(actions.size() > 15)
+        if(actions.size() >= 15)
         {
             try
             {
@@ -112,7 +112,7 @@ public class TestLogger extends JavaPlugin implements Listener
                 {
                     for (BlockAction a : actions)
                         batcher.addToBatch(a);
-                    batcher.insertBatch();
+                    batcher.insertBatchAsync();
                 }
                 actions.clear();
                 this.getLogger().info("Inserted Batch!");
