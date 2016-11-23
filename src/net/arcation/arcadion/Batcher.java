@@ -2,6 +2,8 @@ package net.arcation.arcadion;
 
 import net.arcation.arcadion.interfaces.BatchLayout;
 import net.arcation.arcadion.interfaces.InsertBatcher;
+import net.arcation.arcadion.util.Action;
+import net.arcation.arcadion.util.Provider;
 import org.bukkit.Bukkit;
 
 import java.io.Closeable;
@@ -53,17 +55,37 @@ class Batcher<T> extends InsertBatcher<T>
             //Set the current statement to be a new one (other statement will be run/closed)
             statement = arcadion.getConnection().prepareStatement(layout.getStatement());
 
-            //Pass the old statement into an async thread so it can be run/closed
-            Bukkit.getScheduler().runTaskAsynchronously(arcadion, new RunBatch(temp));
+            //Excute the batch insert synchronously (on the game thread)
+            new BatchInsert(temp).act();
         }
         catch (SQLException e)
         {
-            arcadion.getLogger().info("ERROR inserting batch: " + e.getMessage());
+            arcadion.getLogger().info("ERROR inserting sync batch: " + e.getMessage());
         }
     }
 
     @Override
-    public void close() throws IOException
+    public void insertBatchAsync()
+    {
+        try
+        {
+            //Create a temp variable for holding the statement we will pass into an async thread
+            PreparedStatement temp = statement;
+
+            //Set the current statement to be a new one (other statement will be run/closed)
+            statement = arcadion.getConnection().prepareStatement(layout.getStatement());
+
+            //Pass the old statement into an async thread so it can be run/closed
+            arcadion.queueAsyncInsertable(new BatchInsert(temp));
+        }
+        catch (SQLException e)
+        {
+            arcadion.getLogger().info("ERROR inserting async batch: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void close()
     {
         try
         {
@@ -78,31 +100,53 @@ class Batcher<T> extends InsertBatcher<T>
         }
     }
 
-    private class RunBatch implements Runnable
+    private static class BatchInsert implements Action
     {
-        private final PreparedStatement statement;
+        private PreparedStatement statement;
 
-        public RunBatch(PreparedStatement statement)
+        public BatchInsert(PreparedStatement statement)
         {
             this.statement = statement;
         }
 
         @Override
-        public void run()
+        public void act()
         {
-            try
+            if(statement != null)
             {
-                //Execute the batch (this runnable should NOT be running on the game thread)
-                statement.executeBatch();
+                try
+                {
+                    statement.executeBatch();
+                }
+                catch (SQLException e)
+                {
+                    e.printStackTrace();
+                }
+                finally
+                {
+                    Connection conn = null;
+                    try
+                    {
+                        conn = statement.getConnection();
+                        statement.close();
+                    }
+                    catch (SQLException e)
+                    {
+                        e.printStackTrace();
+                    }
 
-                //Close the statement and its underlying connection
-                Connection conn = statement.getConnection();
-                statement.close();
-                conn.close();
-            }
-            catch (SQLException e)
-            {
-                arcadion.getLogger().info("ERROR on running async batch: "+e.getMessage());
+                    if(conn != null)
+                    {
+                        try
+                        {
+                            conn.close();
+                        }
+                        catch (SQLException e)
+                        {
+                            e.printStackTrace();
+                        }
+                    }
+                }
             }
         }
     }

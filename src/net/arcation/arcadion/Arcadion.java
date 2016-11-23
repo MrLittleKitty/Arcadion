@@ -7,6 +7,8 @@ import net.arcation.arcadion.interfaces.BatchLayout;
 import net.arcation.arcadion.interfaces.InsertBatcher;
 import net.arcation.arcadion.interfaces.Insertable;
 import net.arcation.arcadion.interfaces.Selectable;
+import net.arcation.arcadion.util.Action;
+import net.arcation.arcadion.util.Provider;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -26,7 +28,7 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
     private ThreadGroup threads;
     private HikariDataSource dataSource;
 
-    private LinkedTransferQueue<Insertable> asyncInsertables;
+    private LinkedTransferQueue<Action> asyncInsertables;
     private LinkedTransferQueue<Selectable> asyncSelectables;
 
     private static String HOST_PATH = "database.host";
@@ -136,13 +138,16 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         Thread[] finalThreads = new Thread[threads.activeCount()];
         threads.enumerate(finalThreads);
 
+        this.getLogger().info("Waiting on end of "+finalThreads.length+" threads.");
+
         //For loop because its simpler and depends less on Iterators, etc...
         for(int i = 0; i < finalThreads.length; i++)
         {
             try
             {
                 //Join on all the interrupted threads to make sure they all finish (6 second timeout)
-                finalThreads[i].join(6000);
+                if(finalThreads[i] != null)
+                    finalThreads[i].join(6000);
             }
             catch (InterruptedException e)
             {
@@ -152,6 +157,8 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
             if(finalThreads[i].isAlive())
                 this.getLogger().info("ERROR A database thread did not shut down in time: ThreadName: "+finalThreads[i].getName());
         }
+
+        this.getLogger().info("Successfully ended "+finalThreads.length+" threads.");
     }
 
     private void addDefaults()
@@ -185,7 +192,14 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
     public void queueAsyncInsertable(Insertable insertable)
     {
         if(insertable != null)
-            asyncInsertables.offer(insertable);
+            asyncInsertables.offer(new InsertWrapper(insertable));
+    }
+
+    //Package private method to allow things like the batcher to insert stuff async using non-standard code
+    void queueAsyncInsertable(Action provider)
+    {
+        if(provider != null)
+            asyncInsertables.offer(provider);
     }
 
     public boolean insert(Insertable insertable)
@@ -261,7 +275,7 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         return true;
     }
 
-    LinkedTransferQueue<Insertable> getInsertableQueue()
+    LinkedTransferQueue<Action> getInsertableQueue()
     {
         return asyncInsertables;
     }
@@ -317,5 +331,47 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
             toReturn = null;
         }
         return toReturn;
+    }
+
+    private class InsertWrapper implements Action
+    {
+        private final Insertable insertable;
+
+        public InsertWrapper(Insertable insertable)
+        {
+            this.insertable = insertable;
+            assert insertable != null;
+        }
+
+        @Override
+        public void act()
+        {
+            try (Connection connection = getDataSource().getConnection())
+            {
+                try (PreparedStatement statement = connection.prepareStatement(insertable.getStatement()))
+                {
+                    insertable.setParameters(statement);
+                    try
+                    {
+                        statement.execute();
+                    }
+                    catch (SQLException ex)
+                    {
+                        getLogger().info("ERROR Executing statement: " + ex.getMessage());
+                        return;
+                    }
+                }
+                catch (SQLException ex)
+                {
+                    getLogger().info("ERROR Preparing statement: " + ex.getMessage());
+                    return;
+                } //Try with resources closes the statement when its over
+            } //Try with resources closes the connection when its over
+            catch (SQLException ex)
+            {
+                getLogger().info("ERROR Acquiring connection: " + ex.getMessage());
+                return;
+            }
+        }
     }
 }

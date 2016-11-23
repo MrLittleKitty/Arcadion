@@ -15,7 +15,12 @@ public abstract class InsertBatcher<T> implements Closeable
     public abstract void addToBatch(T item);
 
     /**
-     * Runs this batch insert asynchronously
+     * Runs this batch insert synchronously (on the game thread)
      */
     public abstract void insertBatch();
+
+    /**
+     * Runs this batch insert asynchronously (NOT on the game thread)
+     */
+    public abstract void insertBatchAsync();
 }

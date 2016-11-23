@@ -25,7 +25,7 @@ class SelectThread extends Thread
     @Override
     public void run()
     {
-        while(this.isInterrupted())
+        while(!this.isInterrupted())
         {
             Selectable next = null;
             try
@@ -34,7 +34,7 @@ class SelectThread extends Thread
             }
             catch (InterruptedException ex)
             {
-                arcadion.getLogger().info("ERROR Select Thread interrupted: " + ex.getMessage());
+                arcadion.getLogger().info("WARN Select Thread interrupted: " + ex.getMessage());
                 break;
             }
 
