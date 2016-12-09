@@ -3,6 +3,7 @@ package net.arcation.testlogger;
 import net.arcation.arcadion.interfaces.Insertable;
 import org.bukkit.event.block.BlockBreakEvent;
 
+import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
@@ -11,6 +12,7 @@ import java.sql.SQLException;
  */
 public class BlockBreakInsert implements Insertable
 {
+    //Store all your data in local variables
     private BlockAction item;
 
     public BlockBreakInsert(BlockAction action)
@@ -19,21 +21,14 @@ public class BlockBreakInsert implements Insertable
     }
 
     @Override
-    public void setParameters(PreparedStatement statement)
+    public void setParameters(PreparedStatement statement) throws SQLException
     {
-        try
-        {
-            statement.setString(1, item.PlayerName);
-            statement.setInt(2, item.X);
-            statement.setInt(3, item.Y);
-            statement.setInt(4, item.Z);
-            statement.setString(5, item.BlockMaterial);
-            statement.setString(6, item.Action);
-        }
-        catch (SQLException e)
-        {
-            e.printStackTrace();
-        }
+        statement.setString(1, item.PlayerName);
+        statement.setInt(2, item.X);
+        statement.setInt(3, item.Y);
+        statement.setInt(4, item.Z);
+        statement.setString(5, item.BlockMaterial);
+        statement.setString(6, item.Action);
     }
 
     @Override

@@ -34,7 +34,7 @@ public interface Selectable
      * This method is called from an arbitrary asynchronous thread. NOT the game thread
      * @param set The ResultSet returned from executing the SQL command
      */
-    void receiveResult(ResultSet set);
+    void receiveResult(ResultSet set) throws SQLException;
 
     /**
      * The method that will be called once the query is executed and the result is received

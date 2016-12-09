@@ -32,18 +32,11 @@ public class BlockSelect implements Selectable
     }
 
     @Override
-    public void setParameters(PreparedStatement statement)
+    public void setParameters(PreparedStatement statement) throws SQLException
     {
-        try
-        {
-            statement.setInt(1,x);
-            statement.setInt(2,y);
-            statement.setInt(3,z);
-        }
-        catch (SQLException e)
-        {
-            e.printStackTrace();
-        }
+        statement.setInt(1,x);
+        statement.setInt(2,y);
+        statement.setInt(3,z);
     }
 
     @Override
@@ -55,30 +48,23 @@ public class BlockSelect implements Selectable
     private ArrayList<String> strings;
 
     @Override
-    public void receiveResult(ResultSet set)
+    public void receiveResult(ResultSet set) throws SQLException
     {
         strings = new ArrayList<>();
-        try
+        StringBuilder builder = new StringBuilder();
+        while(set.next())
         {
-            StringBuilder builder = new StringBuilder();
-            while(set.next())
-            {
-                builder.append(set.getString(1))
-                        .append(" broke ")
-                        .append(set.getString(5))
-                        .append(" at ")
-                        .append(set.getInt(2))
-                        .append(' ')
-                        .append(set.getInt(3))
-                        .append(' ')
-                        .append(set.getInt(4));
-                strings.add(builder.toString());
-                builder.delete(0,builder.length());
-            }
-        }
-        catch (SQLException e)
-        {
-            e.printStackTrace();
+            builder.append(set.getString(1))
+                    .append(" broke ")
+                    .append(set.getString(5))
+                    .append(" at ")
+                    .append(set.getInt(2))
+                    .append(' ')
+                    .append(set.getInt(3))
+                    .append(' ')
+                    .append(set.getInt(4));
+            strings.add(builder.toString());
+            builder.delete(0,builder.length());
         }
     }
 
