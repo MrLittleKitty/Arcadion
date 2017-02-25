@@ -209,6 +209,6 @@ arcadionInstance.queueAsyncSelectable(new BlockSelect("Mr_Little_Kitty",0,0,0));
 arcadionInstance.queueAsyncSelectable(new BlockSelect("Mr_Little_Kitty",1,1,1));
 
 //Synchronously select (in a synchronous select, all methods are called from the game thread)
-arcadionInstance.queueAsyncSelectable(new BlockSelect("Mr_Little_Kitty",0,0,0));
-arcadionInstance.queueAsyncSelectable(new BlockSelect("Mr_Little_Kitty",1,1,1));
+arcadionInstance.select(new BlockSelect("Mr_Little_Kitty",0,0,0));
+arcadionInstance.select(new BlockSelect("Mr_Little_Kitty",1,1,1));
 ```
