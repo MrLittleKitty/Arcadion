@@ -3,7 +3,9 @@ A Minecraft Bukkit plugin for standardizing database communication between plugi
 
 ### Releases
 
-__**Minecraft 1.10**__
+__**Minecraft 1.10.2**__
+
+[Arcadion v1.0.4](https://github.com/MrLittleKitty/Arcadion/releases/tag/v1.0.4)
 
 [Arcadion v1.0.3](https://github.com/MrLittleKitty/Arcadion/releases/tag/v1.0.3)
 

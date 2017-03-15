@@ -1,6 +1,6 @@
 name: Arcadion
 main: net.arcation.arcadion.Arcadion
-version: 1.0.3
+version: 1.0.4
 description: A plugin for handling a connection to a MySQL database
 authors: [Mr_Little_Kitty]
 commands:
