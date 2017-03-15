@@ -169,7 +169,7 @@ public class Arcadion extends JavaPlugin implements net.arcation.arcadion.interf
         FileConfiguration config = getConfig();
 
         config.addDefault(HOST_PATH,"127.0.0.1");
-        config.addDefault(PORT_PATH, 3380);
+        config.addDefault(PORT_PATH, 3306);
         config.addDefault(DATABASE_PATH,"civex");
         config.addDefault(USERNAME_PATH,"root");
         config.addDefault(PASSWORD_PATH,"pass");
